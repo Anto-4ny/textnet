@@ -1,0 +1,7 @@
+# Set default behavior
+* text=auto
+
+# Force certain files
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
