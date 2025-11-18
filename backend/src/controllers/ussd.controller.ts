@@ -13,28 +13,40 @@ export const handleUssd = async (req: Request, res: Response) => {
 
   // Check if ready to process payment
   if (newSession.stage === "process") {
-    const { agentNumber, amount } = newSession;
+    let { agentNumber, amount } = newSession;
 
-    // Ensure safe values
+    // Validate required fields
     if (!agentNumber || !amount) {
       res.send("END Invalid session data. Please try again.");
       return;
     }
 
+    // Normalize phone number for STK Push
+    let normalizedPhone = phoneNumber.replace(/^(\+|00)/, "");
+    if (!normalizedPhone.startsWith("254")) {
+      normalizedPhone = "254" + normalizedPhone.slice(-9);
+    }
+
+    // Override PartyA for sandbox testing
+    let partyA = normalizedPhone;
+    if (process.env.MPESA_ENVIRONMENT === "sandbox") {
+      partyA = "254794425552"; // Sandbox test number
+    }
+
     try {
       await initiateStkPush(
-        phoneNumber,
-        Number(amount),     // FIX: convert to number
-        agentNumber         // FIX: guaranteed string
+        partyA,
+        Number(amount),
+        agentNumber
       );
 
       res.send("END Please check your phone to complete M-Pesa payment.");
       return;
     } catch (error: any) {
-  console.error("STK Push Error:", error.response?.data || error.message);
-  res.send("END Failed to initiate payment. Try again later.");
-  return;
-}
+      console.error("STK Push Error:", error.response?.data || error.message);
+      res.send("END Failed to initiate payment. Try again later.");
+      return;
+    }
   }
 
   // Save session
